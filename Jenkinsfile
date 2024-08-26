@@ -15,7 +15,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo 'Clonando el repositorio...'
-                git branch: 'main', url: 'https://github.com/AlexUrtubia/JUnit-jenkins_integration'
+                git branch: 'main', url: 'https://github.com/AlexUrtubia/JUnit-jenkins_integration.git'
             }
         }
 
@@ -57,7 +57,7 @@ pipeline {
         always {
             echo 'Pipeline finalizado.'
             slackSend (
-                channel: '#general', // Reemplaza con tu canal de Slack
+                channel: 'D07DYDV69V1',
                 color: currentBuild.currentResult == 'SUCCESS' ? 'good' : 'danger',
                 tokenCredentialId: 'slackToken',
                 message: "*${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}*\nMás información en: ${env.BUILD_URL}"
