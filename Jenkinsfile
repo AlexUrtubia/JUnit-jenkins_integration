@@ -6,6 +6,11 @@ pipeline {
         jdk "jdk-17"
     }
 
+    environment {
+        // Cargar el token de Slack desde las credenciales
+        SLACK_TOKEN = credentials('slackToken')
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -26,18 +31,20 @@ pipeline {
                 echo 'Ejecutando pruebas unitarias...'
                 sh 'mvn test'
             }
+            post {
+                // Publicar resultados de las pruebas JUnit
+                junit '**/target/surefire-reports/*.xml'
+            }
         }
 
-        stage('Code Coverage Report') {
+        stage('Coverage') {
             steps {
-                echo 'Generando informe de cobertura de código...'
-                sh 'mvn jacoco:report'
+                echo 'Generando informe de cobertura...'
+                sh 'mvn cobertura:cobertura'
             }
             post {
-                always {
-                    echo 'Publicando informe de cobertura...'
-                    jacoco execPattern: '**/target/jacoco.exec'
-                }
+                // Publicar el informe de cobertura
+                cobertura coberturaReportFile: '**/target/site/cobertura/coverage.xml'
             }
         }
     }
@@ -48,9 +55,21 @@ pipeline {
         }
         success {
             echo 'Compilación exitosa.'
+            slackSend (
+                channel: 'D07DYDV69V1',
+                color: 'good',
+                tokenCredentialId: 'slackToken',
+                message: "*${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}*\nMás información en: ${env.BUILD_URL}"
+            )
         }
         failure {
             echo 'Falló la compilación.'
+            slackSend (
+                channel: 'D07DYDV69V1',
+                color: 'danger',
+                tokenCredentialId: 'slackToken',
+                message: "*${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}*\nMás información en: ${env.BUILD_URL}"
+            )
         }
     }
 }
