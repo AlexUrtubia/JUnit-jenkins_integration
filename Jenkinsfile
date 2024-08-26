@@ -32,8 +32,10 @@ pipeline {
                 sh 'mvn test'
             }
             post {
-                // Publicar resultados de las pruebas JUnit
-                junit '**/target/surefire-reports/*.xml'
+                always {
+                    // Publicar resultados de las pruebas JUnit
+                    junit '**/target/surefire-reports/*.xml'
+                }
             }
         }
 
@@ -43,8 +45,10 @@ pipeline {
                 sh 'mvn cobertura:cobertura'
             }
             post {
-                // Publicar el informe de cobertura
-                cobertura coberturaReportFile: '**/target/site/cobertura/coverage.xml'
+                always {
+                    // Publicar el informe de cobertura
+                    cobertura coberturaReportFile: '**/target/site/cobertura/coverage.xml'
+                }
             }
         }
     }
@@ -52,24 +56,18 @@ pipeline {
     post {
         always {
             echo 'Pipeline finalizado.'
+            slackSend (
+                channel: '#general', // Reemplaza con tu canal de Slack
+                color: currentBuild.currentResult == 'SUCCESS' ? 'good' : 'danger',
+                tokenCredentialId: 'slackToken',
+                message: "*${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}*\nMás información en: ${env.BUILD_URL}"
+            )
         }
         success {
             echo 'Compilación exitosa.'
-            slackSend (
-                channel: 'D07DYDV69V1',
-                color: 'good',
-                tokenCredentialId: 'slackToken',
-                message: "*${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}*\nMás información en: ${env.BUILD_URL}"
-            )
         }
         failure {
             echo 'Falló la compilación.'
-            slackSend (
-                channel: 'D07DYDV69V1',
-                color: 'danger',
-                tokenCredentialId: 'slackToken',
-                message: "*${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}*\nMás información en: ${env.BUILD_URL}"
-            )
         }
     }
 }
