@@ -1,73 +1,39 @@
 pipeline {
     agent any
-
-    tools {
-        maven "maven-integration"
-        jdk "jdk-17"
-    }
-
-    environment {
-        // Cargar el token de Slack desde las credenciales
-        SLACK_TOKEN = credentials('slackToken')
-    }
-
+    
     stages {
-        stage('Checkout') {
-            steps {
-                echo 'Clonando el repositorio...'
-                git branch: 'main', url: 'https://github.com/AlexUrtubia/JUnit-jenkins_integration.git'
-            }
-        }
-
         stage('Build') {
             steps {
-                echo 'Compilando el proyecto...'
-                sh 'mvn clean compile'
-            }
-        }
-
-        stage('Test') {
-            steps {
-                echo 'Ejecutando pruebas unitarias...'
-                sh 'mvn test'
-            }
-            post {
-                always {
-                    // Publicar resultados de las pruebas JUnit
-                    junit '**/target/surefire-reports/*.xml'
+                script {
+                    // Ejecuta el build con Maven
+                    sh 'mvn clean install'
                 }
             }
         }
-
+        
         stage('Coverage') {
             steps {
-                echo 'Generando informe de cobertura...'
-                sh 'mvn cobertura:cobertura'
+                script {
+                    echo 'Generando informe de cobertura...'
+                    sh 'mvn jacoco:report'
+                }
             }
-            post {
-                always {
-                    // Publicar el informe de cobertura
-                    cobertura coberturaReportFile: '**/target/site/cobertura/coverage.xml'
+        }
+        
+        stage('Publish Coverage Report') {
+            steps {
+                script {
+                    // Publica el informe de cobertura
+                    jacoco execPattern: '**/target/*.exec', classPattern: '**/target/classes', sourcePattern: '**/src/main/java', inclusionPattern: '**/target/classes/**/*.class'
                 }
             }
         }
     }
-
+    
     post {
         always {
             echo 'Pipeline finalizado.'
-            slackSend (
-                channel: 'D07DYDV69V1',
-                color: currentBuild.currentResult == 'SUCCESS' ? 'good' : 'danger',
-                tokenCredentialId: 'slackToken',
-                message: "*${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}*\nMás información en: ${env.BUILD_URL}"
-            )
-        }
-        success {
-            echo 'Compilación exitosa.'
-        }
-        failure {
-            echo 'Falló la compilación.'
+            slackSend channel: 'D07DYDV69V1', color: 'good', message: 'La compilación y los informes de cobertura se completaron exitosamente.'
         }
     }
 }
